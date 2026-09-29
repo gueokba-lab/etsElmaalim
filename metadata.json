@@ -1,0 +1,6 @@
+{
+  "name": "ETS EL MAALIM - Système de Gestion",
+  "description": "ETS EL MAALIM - Système professionnel de gestion pour centre de formation et cours de soutien : Administration, Réception, Formateurs et Élèves avec suivi en temps réel des séances, présences et paiements.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
