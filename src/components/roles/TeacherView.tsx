@@ -322,7 +322,144 @@ export const TeacherView: React.FC<TeacherViewProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* 4. DOCUMENTS & 5. PROFIL                                                  */}
+      {/* 4. PRÉSENCES & ÉMARGEMENT (APPEL PAR SÉANCE)                              */}
+      {/* ========================================================================= */}
+      {currentSection === 'attendance' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">Feuilles d'Émargement & Pointage</h1>
+              <p className="text-xs text-slate-500">
+                Faites l'appel pour chacune de vos séances et enregistrez les présences, absences et retards.
+              </p>
+            </div>
+            <div className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 self-start sm:self-auto">
+              Synchronisation immédiate avec l'Administration & l'Espace Élève
+            </div>
+          </div>
+
+          {/* Sessions List for Taking Attendance */}
+          <div className="space-y-3">
+            <h2 className="text-sm font-bold text-slate-900">Mes Séances Programmées</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {teacherSessions.map((ses) => {
+                const sesAtt = attendance.filter((a) => a.sessionId === ses.id);
+                const pCount = sesAtt.filter((a) => a.status === 'present').length;
+                const aCount = sesAtt.filter((a) => a.status === 'absent').length;
+                const lCount = sesAtt.filter((a) => a.status === 'late').length;
+
+                return (
+                  <div
+                    key={ses.id}
+                    className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4 hover:border-blue-400 transition-all"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm text-slate-900">{ses.groupName}</span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800">
+                            {ses.room}
+                          </span>
+                        </div>
+                        <div className="text-xs text-slate-500 mt-0.5">
+                          {ses.day} · {ses.time} · {ses.subject}
+                        </div>
+                      </div>
+
+                      <span
+                        className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                          ses.attendanceCompleted
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-amber-50 text-amber-700 border border-amber-200'
+                        }`}
+                      >
+                        {ses.attendanceCompleted ? '✓ Appel validé' : 'En attente'}
+                      </span>
+                    </div>
+
+                    {ses.attendanceCompleted && sesAtt.length > 0 && (
+                      <div className="flex items-center gap-2 text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                        <span className="text-emerald-700 font-bold">🟢 {pCount} Présents</span>
+                        <span>·</span>
+                        <span className="text-rose-700 font-bold">🔴 {aCount} Absents</span>
+                        <span>·</span>
+                        <span className="text-amber-700 font-bold">🟠 {lCount} Retards</span>
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => onTakeAttendance(ses)}
+                      className={`w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                        ses.attendanceCompleted
+                          ? 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                          : 'bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/20'
+                      }`}
+                    >
+                      <CheckSquare className="w-4 h-4" />
+                      <span>{ses.attendanceCompleted ? 'Modifier les présences' : 'Faire l\'appel en classe'}</span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Recent Records Log for Teacher */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            <div className="p-4 border-b border-slate-100">
+              <h3 className="text-sm font-bold text-slate-900">Derniers Pointages Réalisés</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-200">
+                  <tr>
+                    <th className="px-4 py-3">Date & Heure</th>
+                    <th className="px-4 py-3">Élève</th>
+                    <th className="px-4 py-3">Matière</th>
+                    <th className="px-4 py-3">Statut</th>
+                    <th className="px-4 py-3">Motif / Note</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {attendance
+                    .filter((a) => a.subject.includes('Mathématiques') || teacherSessions.some((s) => s.id === a.sessionId))
+                    .map((rec) => (
+                      <tr key={rec.id} className="hover:bg-slate-50/70">
+                        <td className="px-4 py-3 font-mono text-slate-600">
+                          {rec.date} {rec.time}
+                        </td>
+                        <td className="px-4 py-3 font-bold text-slate-900">{rec.studentName}</td>
+                        <td className="px-4 py-3 text-slate-700">{rec.subject}</td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              rec.status === 'present'
+                                ? 'bg-emerald-50 text-emerald-700'
+                                : rec.status === 'absent'
+                                ? 'bg-rose-50 text-rose-700'
+                                : 'bg-amber-50 text-amber-700'
+                            }`}
+                          >
+                            {rec.status === 'present'
+                              ? '🟢 Présent'
+                              : rec.status === 'absent'
+                              ? '🔴 Absent'
+                              : '🟠 Retard'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-slate-500 italic">{rec.note || '—'}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 5. DOCUMENTS & 6. PROFIL                                                  */}
       {/* ========================================================================= */}
       {currentSection === 'documents' && (
         <div className="space-y-4">

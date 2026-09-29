@@ -563,6 +563,7 @@ export const INITIAL_USERS: UserAccount[] = [
     id: 'usr-1',
     name: 'Nadia Benali',
     email: 'nadia@centrepro.demo',
+    password: '123456',
     role: 'reception',
     active: true,
     permissions: {
@@ -578,6 +579,7 @@ export const INITIAL_USERS: UserAccount[] = [
     id: 'usr-2',
     name: 'Karima Mansour',
     email: 'karima@centrepro.demo',
+    password: '123456',
     role: 'reception',
     active: true,
     permissions: {
@@ -593,6 +595,7 @@ export const INITIAL_USERS: UserAccount[] = [
     id: 'usr-3',
     name: 'Direction Générale',
     email: 'direction@elmaalim.dz',
+    password: '123456',
     role: 'admin',
     active: true,
     permissions: {

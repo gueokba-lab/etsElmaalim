@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserRole } from '../../types';
+import { UserRole, UserAccount } from '../../types';
 import {
   Bell,
   Search,
@@ -18,6 +18,7 @@ import {
 
 interface TopHeaderProps {
   currentRole: UserRole;
+  receptionUser?: UserAccount | null;
   title: string;
   subtitle?: string;
   onSelectRole: (role: UserRole) => void;
@@ -27,6 +28,7 @@ interface TopHeaderProps {
 
 export const TopHeader: React.FC<TopHeaderProps> = ({
   currentRole,
+  receptionUser,
   title,
   subtitle,
   onSelectRole,
@@ -57,8 +59,16 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
     switch (role) {
       case 'admin':
         return { name: 'Directeur Général', detail: 'ETS EL MAALIM · Direction', initials: 'DG', color: 'bg-indigo-600' };
-      case 'reception':
-        return { name: 'Nadia Benali', detail: 'ETS EL MAALIM · Réception', initials: 'NB', color: 'bg-emerald-600' };
+      case 'reception': {
+        const name = receptionUser?.name || 'Nadia Benali';
+        const initials = name
+          .split(' ')
+          .map((n: string) => n[0])
+          .join('')
+          .substring(0, 2)
+          .toUpperCase() || 'NB';
+        return { name, detail: 'ETS EL MAALIM · Réception', initials, color: 'bg-emerald-600' };
+      }
       case 'teacher':
         return { name: 'Ahmed Mansouri', detail: 'Professeur Mathématiques', initials: 'AM', color: 'bg-blue-600' };
       case 'student':

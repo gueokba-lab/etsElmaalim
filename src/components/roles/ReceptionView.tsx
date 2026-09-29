@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Student, PaymentRecord, SessionItem, Group, ReceptionSection } from '../../types';
+import { Student, PaymentRecord, SessionItem, Group, ReceptionSection, UserAccount } from '../../types';
 import {
   UserPlus,
   Banknote,
@@ -15,11 +15,15 @@ import {
   Filter,
   Eye,
   Check,
-  CreditCard
+  CreditCard,
+  Building,
+  UserCheck,
+  ShieldAlert
 } from 'lucide-react';
 
 interface ReceptionViewProps {
   currentTab: ReceptionSection;
+  currentReceptionUser?: UserAccount | null;
   students: Student[];
   payments: PaymentRecord[];
   sessions: SessionItem[];
@@ -32,6 +36,7 @@ interface ReceptionViewProps {
 
 export const ReceptionView: React.FC<ReceptionViewProps> = ({
   currentTab,
+  currentReceptionUser,
   students,
   payments,
   sessions,
@@ -44,12 +49,20 @@ export const ReceptionView: React.FC<ReceptionViewProps> = ({
   const [levelFilter, setLevelFilter] = useState('Tous');
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'unpaid' | 'paid'>('all');
 
+  const operatorName = currentReceptionUser ? currentReceptionUser.name.split(' ')[0] : 'Nadia';
+  const permissions = currentReceptionUser?.permissions || {
+    canRegisterStudents: true,
+    canCollectPayments: true,
+    canViewPlanning: true,
+    canExportReports: false
+  };
+
   // Daily operations metrics
-  const todayPayments = payments.filter((p) => p.date === "Aujourd'hui" || p.date.includes('28 Sept'));
+  const todayPayments = payments.filter((p) => p.date === "Aujourd'hui" || p.date.includes('29 Sept') || p.date.includes('28 Sept'));
   const todayRevenue = todayPayments.reduce((sum, p) => sum + p.paidAmount, 0);
   const unpaidStudents = students.filter((s) => s.remainingAmount > 0);
   const totalUnpaid = unpaidStudents.reduce((sum, s) => sum + s.remainingAmount, 0);
-  const todaySessions = sessions.filter((s) => s.date === "Aujourd'hui");
+  const todaySessions = sessions.filter((s) => s.date === "Aujourd'hui" || s.day === 'Mardi');
   const newStudents = students.slice(0, 5);
 
   // Search filtered students
@@ -76,26 +89,31 @@ export const ReceptionView: React.FC<ReceptionViewProps> = ({
             <Sparkles className="w-3.5 h-3.5 text-blue-300" />
             Guichet & Accueil Opérationnel · ETS EL MAALIM
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">Bonjour, Nadia 👋</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-white">Bonjour, {operatorName} 👋</h1>
           <p className="text-sm text-blue-200/80 mt-1">
             Tableau de bord de réception ETS EL MAALIM — Gestion quotidienne des inscriptions, encaissements et plannings.
           </p>
         </div>
+
         <div className="flex items-center gap-3 shrink-0">
-          <button
-            onClick={onOpenAddStudent}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-semibold rounded-xl text-sm shadow-md shadow-blue-600/30 transition-all cursor-pointer"
-          >
-            <UserPlus className="w-4 h-4" />
-            <span>Inscrire un étudiant</span>
-          </button>
-          <button
-            onClick={onOpenAddPayment}
-            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-semibold rounded-xl text-sm shadow-md shadow-emerald-600/30 transition-all cursor-pointer"
-          >
-            <Banknote className="w-4 h-4" />
-            <span>Encaisser un paiement</span>
-          </button>
+          {permissions.canRegisterStudents && (
+            <button
+              onClick={onOpenAddStudent}
+              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-semibold rounded-xl text-xs shadow-md shadow-blue-600/30 transition-all cursor-pointer"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>Inscrire un étudiant</span>
+            </button>
+          )}
+          {permissions.canCollectPayments && (
+            <button
+              onClick={onOpenAddPayment}
+              className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-semibold rounded-xl text-xs shadow-md shadow-emerald-600/30 transition-all cursor-pointer"
+            >
+              <Banknote className="w-4 h-4" />
+              <span>Encaisser un paiement</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -117,7 +135,7 @@ export const ReceptionView: React.FC<ReceptionViewProps> = ({
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
           <div>
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Paiements du Jour</span>
-            <div className="text-2xl font-black text-emerald-600 mt-1">{todayRevenue.toLocaleString()} DA</div>
+            <div className="text-2xl font-black text-emerald-600 mt-1">{todayRevenue.toLocaleString()} DZD</div>
             <div className="text-xs text-slate-500 font-medium mt-1">
               {todayPayments.length} encaissements
             </div>
@@ -130,9 +148,9 @@ export const ReceptionView: React.FC<ReceptionViewProps> = ({
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
           <div>
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Impayés</span>
-            <div className="text-2xl font-black text-rose-600 mt-1">{totalUnpaid.toLocaleString()} DA</div>
+            <div className="text-2xl font-black text-rose-600 mt-1">{totalUnpaid.toLocaleString()} DZD</div>
             <div className="text-xs text-rose-600 font-medium mt-1 flex items-center gap-1">
-              <AlertCircle className="w-3.5 h-3.5" /> {unpaidStudents.length} étudiants concernés
+              <AlertCircle className="w-3.5 h-3.5" /> {unpaidStudents.length} élèves concernés
             </div>
           </div>
           <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
@@ -154,7 +172,9 @@ export const ReceptionView: React.FC<ReceptionViewProps> = ({
         </div>
       </div>
 
-      {/* Main Content Sections Based on Tab or Default Operations Grid */}
+      {/* ========================================================================= */}
+      {/* 1. TABLEAU DE BORD & 2. ÉTUDIANTS                                         */}
+      {/* ========================================================================= */}
       {(currentTab === 'dashboard' || currentTab === 'students') && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
           <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -180,7 +200,7 @@ export const ReceptionView: React.FC<ReceptionViewProps> = ({
               <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-medium text-slate-600">
                 <button
                   onClick={() => setPaymentFilter('all')}
-                  className={`px-2.5 py-1 rounded-lg transition-all ${
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
                     paymentFilter === 'all' ? 'bg-white text-slate-900 shadow-xs font-semibold' : ''
                   }`}
                 >
@@ -188,7 +208,7 @@ export const ReceptionView: React.FC<ReceptionViewProps> = ({
                 </button>
                 <button
                   onClick={() => setPaymentFilter('unpaid')}
-                  className={`px-2.5 py-1 rounded-lg transition-all ${
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
                     paymentFilter === 'unpaid' ? 'bg-rose-600 text-white shadow-xs font-semibold' : 'text-rose-600'
                   }`}
                 >
@@ -196,7 +216,7 @@ export const ReceptionView: React.FC<ReceptionViewProps> = ({
                 </button>
                 <button
                   onClick={() => setPaymentFilter('paid')}
-                  className={`px-2.5 py-1 rounded-lg transition-all ${
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
                     paymentFilter === 'paid' ? 'bg-emerald-600 text-white shadow-xs font-semibold' : 'text-emerald-700'
                   }`}
                 >
@@ -210,9 +230,10 @@ export const ReceptionView: React.FC<ReceptionViewProps> = ({
                 className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none"
               >
                 <option value="Tous">Tous Niveaux</option>
-                <option value="3AS (Terminale)">3AS (Terminale)</option>
+                <option value="3AS">3AS (Terminale)</option>
                 <option value="2AS">2AS</option>
-                <option value="4AM (BEM)">4AM (BEM)</option>
+                <option value="1AS">1AS</option>
+                <option value="BEM">4AM (BEM)</option>
               </select>
             </div>
           </div>
@@ -244,7 +265,7 @@ export const ReceptionView: React.FC<ReceptionViewProps> = ({
                           <div className="font-bold text-slate-900">
                             {st.lastName} {st.firstName}
                           </div>
-                          <div className="text-[11px] text-slate-400 font-normal">{st.email}</div>
+                          <div className="text-[11px] text-slate-400 font-normal">{st.email || '—'}</div>
                         </div>
                       </div>
                     </td>
@@ -259,14 +280,14 @@ export const ReceptionView: React.FC<ReceptionViewProps> = ({
                       <div className="text-[11px] text-slate-400">{st.level}</div>
                     </td>
                     <td className="py-3 px-4 text-slate-700">
-                      <span className="font-medium text-slate-800">{st.subscriptionPlan}</span>
-                      <div className="text-[11px] text-slate-400">{st.monthlyFee.toLocaleString()} DA/mois</div>
+                      <span className="font-medium text-slate-800">{st.subscriptionPlan || `Abonnement ${st.level}`}</span>
+                      <div className="text-[11px] text-slate-400">{st.monthlyFee.toLocaleString()} DZD/mois</div>
                     </td>
                     <td className="py-3 px-4">
-                      <div className="font-bold text-emerald-600">{st.paidAmount.toLocaleString()} DA</div>
+                      <div className="font-bold text-emerald-600">{st.paidAmount.toLocaleString()} DZD</div>
                       {st.remainingAmount > 0 ? (
                         <div className="text-[11px] font-semibold text-rose-600">
-                          Reste: {st.remainingAmount.toLocaleString()} DA
+                          Reste: {st.remainingAmount.toLocaleString()} DZD
                         </div>
                       ) : (
                         <div className="text-[11px] text-emerald-600 flex items-center gap-0.5">
@@ -294,7 +315,7 @@ export const ReceptionView: React.FC<ReceptionViewProps> = ({
                           <Eye className="w-3.5 h-3.5" />
                           <span>Fiche</span>
                         </button>
-                        {st.remainingAmount > 0 && (
+                        {st.remainingAmount > 0 && permissions.canCollectPayments && (
                           <button
                             onClick={onOpenAddPayment}
                             className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-xs transition-colors flex items-center gap-1 cursor-pointer"
@@ -324,7 +345,7 @@ export const ReceptionView: React.FC<ReceptionViewProps> = ({
                   </div>
                   {st.remainingAmount > 0 ? (
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700">
-                      Impayé {st.remainingAmount.toLocaleString()} DA
+                      Impayé {st.remainingAmount.toLocaleString()} DZD
                     </span>
                   ) : (
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">
@@ -337,7 +358,7 @@ export const ReceptionView: React.FC<ReceptionViewProps> = ({
                   <span className="font-mono text-blue-600">{st.phone}</span>
                   <button
                     onClick={() => onSelectStudent(st)}
-                    className="text-xs font-semibold text-blue-600 flex items-center gap-1"
+                    className="text-xs font-semibold text-blue-600 flex items-center gap-1 cursor-pointer"
                   >
                     Voir dossier <ArrowUpRight className="w-3.5 h-3.5" />
                   </button>
@@ -348,95 +369,296 @@ export const ReceptionView: React.FC<ReceptionViewProps> = ({
         </div>
       )}
 
-      {/* Today's Operations Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Today's Schedule at Reception */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-4">
-          <div className="flex items-center justify-between">
+      {/* ========================================================================= */}
+      {/* 3. INSCRIPTIONS                                                            */}
+      {/* ========================================================================= */}
+      {currentTab === 'inscriptions' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-base font-bold text-slate-900">Séances du Jour (Accueil)</h2>
-              <p className="text-xs text-slate-500">Pour guider les élèves vers les bonnes salles.</p>
+              <h1 className="text-xl font-bold text-slate-900">Guichet des Inscriptions</h1>
+              <p className="text-xs text-slate-500">
+                Enregistrez les nouveaux candidats et affectez-les aux groupes de soutien.
+              </p>
             </div>
-            <span className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-100">
-              {todaySessions.length} Séances
-            </span>
+            {permissions.canRegisterStudents && (
+              <button
+                onClick={onOpenAddStudent}
+                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-md shadow-blue-600/20 cursor-pointer self-start sm:self-auto"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>Nouvelle Inscription</span>
+              </button>
+            )}
           </div>
 
-          <div className="space-y-3">
-            {todaySessions.map((session) => (
-              <div
-                key={session.id}
-                className="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-slate-50 transition-colors flex items-center justify-between gap-4"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-800 font-bold flex flex-col items-center justify-center text-xs shrink-0">
-                    <Clock className="w-3.5 h-3.5 mb-0.5" />
-                    <span>{session.time}</span>
-                  </div>
-                  <div>
-                    <div className="font-bold text-slate-900 text-sm">
-                      {session.subject} — {session.groupName}
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
+            <h2 className="text-sm font-bold text-slate-900 mb-3">Dernières Inscriptions Effectuées</h2>
+            <div className="divide-y divide-slate-100">
+              {students.slice(0, 8).map((st) => (
+                <div key={st.id} className="py-3 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center">
+                      {st.firstName[0]}
                     </div>
-                    <div className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
-                      <span>Prof: {session.teacherName}</span>
-                      <span>·</span>
-                      <span className="font-semibold text-slate-700">{session.room}</span>
+                    <div>
+                      <div className="font-bold text-slate-900">{st.firstName} {st.lastName}</div>
+                      <div className="text-[11px] text-slate-400">Inscrit le {st.enrollmentDate} · {st.level}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-semibold text-slate-800">{st.groupName}</div>
+                    <div className="text-emerald-600 font-bold text-[11px]">
+                      {st.paidAmount.toLocaleString()} DZD réglé
                     </div>
                   </div>
                 </div>
-                <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
-                  {session.status}
-                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 4. PAIEMENTS & CAISSE                                                      */}
+      {/* ========================================================================= */}
+      {currentTab === 'payments' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">Journal de Caisse & Paiements</h1>
+              <p className="text-xs text-slate-500">
+                Encaissements de scolarité, délivrance de reçus numérotés et suivi des versements.
+              </p>
+            </div>
+            {permissions.canCollectPayments && (
+              <button
+                onClick={onOpenAddPayment}
+                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-md shadow-emerald-600/20 cursor-pointer self-start sm:self-auto"
+              >
+                <Banknote className="w-4 h-4" />
+                <span>Encaisser un versement</span>
+              </button>
+            )}
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            <div className="p-4 border-b border-slate-100">
+              <h2 className="text-sm font-bold text-slate-900">Tous les Reçus Délivrés</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-200">
+                  <tr>
+                    <th className="py-3 px-4">Reçu N°</th>
+                    <th className="py-3 px-4">Élève</th>
+                    <th className="py-3 px-4">Abonnement</th>
+                    <th className="py-3 px-4">Date</th>
+                    <th className="py-3 px-4">Mode</th>
+                    <th className="py-3 px-4">Montant</th>
+                    <th className="py-3 px-4 text-right">Statut</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {payments.map((p) => (
+                    <tr key={p.id} className="hover:bg-slate-50/70">
+                      <td className="py-3 px-4 font-mono font-bold text-slate-900">{p.receiptNumber}</td>
+                      <td className="py-3 px-4 font-bold text-slate-900">{p.studentName}</td>
+                      <td className="py-3 px-4 text-slate-600">{p.subscriptionPlan}</td>
+                      <td className="py-3 px-4 text-slate-500">{p.date}</td>
+                      <td className="py-3 px-4 text-slate-600">{p.paymentMethod}</td>
+                      <td className="py-3 px-4 font-bold text-emerald-600">+{p.paidAmount.toLocaleString()} DZD</td>
+                      <td className="py-3 px-4 text-right">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700">
+                          {p.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 5. GROUPES & EFFECTIFS                                                     */}
+      {/* ========================================================================= */}
+      {currentTab === 'groups' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">Groupes & Effectifs</h1>
+              <p className="text-xs text-slate-500">
+                État du remplissage des groupes pour orienter les nouvelles inscriptions.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {groups.map((grp) => {
+              const fillPct = Math.round((grp.studentCount / grp.maxCapacity) * 100);
+              return (
+                <div key={grp.id} className="p-5 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-sm text-slate-900">{grp.name}</span>
+                    <span className="text-xs font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700">
+                      {grp.room}
+                    </span>
+                  </div>
+
+                  <div className="text-xs text-slate-500 space-y-1">
+                    <div>Matière : <strong className="text-slate-800">{grp.subject}</strong></div>
+                    <div>Formateur : <strong className="text-slate-800">{grp.teacherName}</strong></div>
+                    <div>Horaires : {grp.scheduleDays} · {grp.scheduleTime}</div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between text-[11px] font-semibold text-slate-600 mb-1">
+                      <span>Remplissage</span>
+                      <span>{grp.studentCount} / {grp.maxCapacity} ({fillPct}%)</span>
+                    </div>
+                    <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                      <div
+                        className={`h-full ${fillPct >= 90 ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                        style={{ width: `${Math.min(100, fillPct)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 6. PLANNING DES SALLES                                                     */}
+      {/* ========================================================================= */}
+      {currentTab === 'planning' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">Planning & Occupation des Salles</h1>
+              <p className="text-xs text-slate-500">
+                Consultez les créneaux pour orienter les parents et élèves dès leur arrivée à l'accueil.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {sessions.map((ses) => (
+              <div key={ses.id} className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-800">
+                    {ses.day} — {ses.time}
+                  </span>
+                  <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
+                    {ses.room}
+                  </span>
+                </div>
+                <div className="font-bold text-slate-900 text-sm">{ses.subject}</div>
+                <div className="text-xs text-slate-500">{ses.groupName} · Formateur: {ses.teacherName}</div>
               </div>
             ))}
           </div>
         </div>
+      )}
 
-        {/* Recent Transactions at the Counter */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-base font-bold text-slate-900">Derniers Encaissements au Guichet</h2>
-              <p className="text-xs text-slate-500">Reçus délivrés récemment.</p>
+      {/* Today's Operations Grid (shown on dashboard) */}
+      {currentTab === 'dashboard' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Today's Schedule at Reception */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">Séances du Jour (Accueil)</h2>
+                <p className="text-xs text-slate-500">Pour guider les élèves vers les bonnes salles.</p>
+              </div>
+              <span className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-100">
+                {todaySessions.length} Séances
+              </span>
             </div>
-            <button
-              onClick={onOpenAddPayment}
-              className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
-            >
-              + Nouveau reçu
-            </button>
-          </div>
 
-          <div className="space-y-2.5">
-            {payments.slice(0, 5).map((pay) => (
-              <div
-                key={pay.id}
-                className="p-3 rounded-xl border border-slate-100 hover:border-slate-200 transition-colors flex items-center justify-between"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 font-bold flex items-center justify-center text-xs">
-                    DA
-                  </div>
-                  <div>
-                    <div className="font-bold text-slate-900 text-xs">{pay.studentName}</div>
-                    <div className="text-[11px] text-slate-500">
-                      {pay.subscription} · {pay.date}
+            <div className="space-y-3">
+              {todaySessions.map((session) => (
+                <div
+                  key={session.id}
+                  className="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-slate-50 transition-colors flex items-center justify-between gap-4"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-800 font-bold flex flex-col items-center justify-center text-xs shrink-0">
+                      <Clock className="w-3.5 h-3.5 mb-0.5" />
+                      <span>{session.time.split(' - ')[0]}</span>
+                    </div>
+                    <div>
+                      <div className="font-bold text-slate-900 text-sm">
+                        {session.subject} — {session.groupName}
+                      </div>
+                      <div className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
+                        <span>Prof: {session.teacherName}</span>
+                        <span>·</span>
+                        <span className="font-semibold text-slate-700">{session.room}</span>
+                      </div>
                     </div>
                   </div>
+                  <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                    {session.status}
+                  </span>
                 </div>
-                <div className="text-right">
-                  <div className="font-bold text-emerald-600 text-xs">+{pay.paidAmount.toLocaleString()} DA</div>
-                  {pay.remainingAmount > 0 ? (
-                    <div className="text-[10px] text-rose-500 font-semibold">Reste: {pay.remainingAmount} DA</div>
-                  ) : (
-                    <div className="text-[10px] text-emerald-600 font-medium">Soldé</div>
-                  )}
-                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Recent Transactions at the Counter */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">Derniers Encaissements au Guichet</h2>
+                <p className="text-xs text-slate-500">Reçus délivrés récemment.</p>
               </div>
-            ))}
+              {permissions.canCollectPayments && (
+                <button
+                  onClick={onOpenAddPayment}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
+                >
+                  + Nouveau reçu
+                </button>
+              )}
+            </div>
+
+            <div className="space-y-2.5">
+              {payments.slice(0, 5).map((pay) => (
+                <div
+                  key={pay.id}
+                  className="p-3 rounded-xl border border-slate-100 hover:border-slate-200 transition-colors flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 font-bold flex items-center justify-center text-xs">
+                      DZD
+                    </div>
+                    <div>
+                      <div className="font-bold text-slate-900 text-xs">{pay.studentName}</div>
+                      <div className="text-[11px] text-slate-500">
+                        {pay.subscriptionPlan} · {pay.date}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-emerald-600 text-xs">+{pay.paidAmount.toLocaleString()} DZD</div>
+                    {pay.remainingAmount > 0 ? (
+                      <div className="text-[10px] text-rose-500 font-semibold">Reste: {pay.remainingAmount.toLocaleString()} DZD</div>
+                    ) : (
+                      <div className="text-[10px] text-emerald-600 font-medium">Soldé</div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

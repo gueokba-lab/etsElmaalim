@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserRole } from '../../types';
+import { UserRole, UserAccount } from '../../types';
 import {
   GraduationCap,
   ShieldCheck,
@@ -12,30 +12,95 @@ import {
   Lock,
   Mail,
   KeyRound,
-  LogIn
+  LogIn,
+  AlertCircle,
+  X
 } from 'lucide-react';
 
 interface LoginViewProps {
   onSelectRole: (role: UserRole) => void;
+  users: UserAccount[];
+  onLoginAttempt?: (role: UserRole, email?: string) => { success: boolean; error?: string };
+  onLoginWithCredentials?: (email: string, pass: string) => { success: boolean; error?: string };
 }
 
-export const LoginView: React.FC<LoginViewProps> = ({ onSelectRole }) => {
+export const LoginView: React.FC<LoginViewProps> = ({
+  onSelectRole,
+  users,
+  onLoginAttempt,
+  onLoginWithCredentials
+}) => {
   const [activeTab, setActiveTab] = useState<'quick' | 'credentials'>('quick');
   const [emailInput, setEmailInput] = useState('nadia@centrepro.demo');
   const [passwordInput, setPasswordInput] = useState('123456');
+  const [loginError, setLoginError] = useState<string | null>(null);
+
+  const nadiaUser =
+    users.find((u) => u.email.toLowerCase() === 'nadia@centrepro.demo') ||
+    users.find((u) => u.role === 'reception');
+  const isNadiaDisabled = nadiaUser ? !nadiaUser.active : false;
+
+  const handleQuickRole = (role: UserRole) => {
+    setLoginError(null);
+    if (role === 'reception') {
+      if (isNadiaDisabled) {
+        setLoginError(
+          `Compte désactivé : Le compte de ${nadiaUser?.name || 'Nadia Benali'} (${nadiaUser?.email || 'nadia@centrepro.demo'}) a été suspendu par l'administration.`
+        );
+        return;
+      }
+      if (onLoginAttempt) {
+        const res = onLoginAttempt('reception');
+        if (!res.success) {
+          setLoginError(res.error || 'Compte désactivé.');
+          return;
+        }
+      } else {
+        onSelectRole('reception');
+      }
+      return;
+    }
+
+    if (onLoginAttempt) {
+      const res = onLoginAttempt(role);
+      if (!res.success) {
+        setLoginError(res.error || 'Erreur de connexion.');
+        return;
+      }
+    } else {
+      onSelectRole(role);
+    }
+  };
 
   const handleCredentialsLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (emailInput.toLowerCase().includes('nadia') || emailInput.toLowerCase().includes('reception')) {
-      onSelectRole('reception');
-    } else if (emailInput.toLowerCase().includes('direction') || emailInput.toLowerCase().includes('admin')) {
-      onSelectRole('admin');
-    } else if (emailInput.toLowerCase().includes('ahmed') || emailInput.toLowerCase().includes('prof')) {
-      onSelectRole('teacher');
+    setLoginError(null);
+
+    if (onLoginWithCredentials) {
+      const res = onLoginWithCredentials(emailInput, passwordInput);
+      if (!res.success) {
+        setLoginError(res.error || 'Erreur de connexion.');
+        return;
+      }
     } else {
-      onSelectRole('reception');
+      // Fallback
+      if (emailInput.toLowerCase().includes('nadia') || emailInput.toLowerCase().includes('reception')) {
+        if (isNadiaDisabled) {
+          setLoginError("Compte désactivé : Ce compte a été suspendu par l'administration.");
+          return;
+        }
+        onSelectRole('reception');
+      } else if (emailInput.toLowerCase().includes('direction') || emailInput.toLowerCase().includes('admin')) {
+        onSelectRole('admin');
+      } else if (emailInput.toLowerCase().includes('ahmed') || emailInput.toLowerCase().includes('prof')) {
+        onSelectRole('teacher');
+      } else {
+        onSelectRole('student');
+      }
     }
   };
+
+  const receptionAccounts = users.filter((u) => u.role === 'reception');
 
   return (
     <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-between">
@@ -124,7 +189,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSelectRole }) => {
 
               <div className="flex items-center bg-slate-800/80 p-1 rounded-xl text-xs font-semibold">
                 <button
-                  onClick={() => setActiveTab('quick')}
+                  onClick={() => {
+                    setActiveTab('quick');
+                    setLoginError(null);
+                  }}
                   className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                     activeTab === 'quick' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
                   }`}
@@ -132,7 +200,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSelectRole }) => {
                   Accès Direct
                 </button>
                 <button
-                  onClick={() => setActiveTab('credentials')}
+                  onClick={() => {
+                    setActiveTab('credentials');
+                    setLoginError(null);
+                  }}
                   className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                     activeTab === 'credentials' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
                   }`}
@@ -142,11 +213,28 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSelectRole }) => {
               </div>
             </div>
 
+            {/* Error Notification Banner */}
+            {loginError && (
+              <div className="p-4 rounded-2xl bg-rose-950/80 border border-rose-500/50 text-rose-200 text-xs flex items-start gap-3 shadow-lg animate-in fade-in slide-in-from-top-2">
+                <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <strong className="block text-sm font-bold text-white mb-0.5">Compte désactivé</strong>
+                  <span>{loginError}</span>
+                </div>
+                <button
+                  onClick={() => setLoginError(null)}
+                  className="text-rose-400 hover:text-white p-1 rounded-lg hover:bg-rose-900/50 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
             {activeTab === 'quick' ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 {/* 1. Administration */}
                 <button
-                  onClick={() => onSelectRole('admin')}
+                  onClick={() => handleQuickRole('admin')}
                   className="p-4 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 hover:border-indigo-500 text-left transition-all group flex flex-col justify-between cursor-pointer hover:shadow-lg hover:shadow-indigo-500/10"
                 >
                   <div className="flex items-start justify-between">
@@ -170,31 +258,63 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSelectRole }) => {
 
                 {/* 2. Réception - Nadia Benali */}
                 <button
-                  onClick={() => onSelectRole('reception')}
-                  className="p-4 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 hover:border-emerald-500 text-left transition-all group flex flex-col justify-between cursor-pointer hover:shadow-lg hover:shadow-emerald-500/10 ring-1 ring-emerald-500/30"
+                  onClick={() => handleQuickRole('reception')}
+                  className={`p-4 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border text-left transition-all group flex flex-col justify-between cursor-pointer hover:shadow-lg ${
+                    isNadiaDisabled
+                      ? 'border-rose-700/80 ring-1 ring-rose-500/30 opacity-80'
+                      : 'border-slate-700/80 hover:border-emerald-500 hover:shadow-emerald-500/10 ring-1 ring-emerald-500/30'
+                  }`}
                 >
                   <div className="flex items-start justify-between">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform ${
+                        isNadiaDisabled
+                          ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                          : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      }`}
+                    >
                       <UserCheck className="w-5 h-5" />
                     </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800">
-                      Nadia Benali
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        isNadiaDisabled
+                          ? 'bg-rose-950 text-rose-300 border border-rose-800'
+                          : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                      }`}
+                    >
+                      {isNadiaDisabled ? 'Compte Désactivé' : 'Nadia Benali'}
                     </span>
                   </div>
                   <div className="mt-4">
-                    <div className="font-bold text-white text-sm group-hover:text-emerald-300 transition-colors flex items-center justify-between">
+                    <div
+                      className={`font-bold text-sm transition-colors flex items-center justify-between ${
+                        isNadiaDisabled
+                          ? 'text-rose-300'
+                          : 'text-white group-hover:text-emerald-300'
+                      }`}
+                    >
                       Réception
-                      <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all" />
+                      <ArrowRight
+                        className={`w-4 h-4 group-hover:translate-x-1 transition-all ${
+                          isNadiaDisabled
+                            ? 'text-rose-500'
+                            : 'text-slate-500 group-hover:text-emerald-400'
+                        }`}
+                      />
                     </div>
-                    <div className="text-[11px] text-emerald-300 font-mono mt-0.5">
-                      nadia@centrepro.demo · 123456
+                    <div
+                      className={`text-[11px] font-mono mt-0.5 ${
+                        isNadiaDisabled ? 'text-rose-400' : 'text-emerald-300'
+                      }`}
+                    >
+                      {isNadiaDisabled ? 'Accès suspendu par direction' : 'nadia@centrepro.demo · 123456'}
                     </div>
                   </div>
                 </button>
 
                 {/* 3. Formateur - Ahmed Mansouri */}
                 <button
-                  onClick={() => onSelectRole('teacher')}
+                  onClick={() => handleQuickRole('teacher')}
                   className="p-4 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 hover:border-amber-500 text-left transition-all group flex flex-col justify-between cursor-pointer hover:shadow-lg hover:shadow-amber-500/10"
                 >
                   <div className="flex items-start justify-between">
@@ -218,7 +338,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSelectRole }) => {
 
                 {/* 4. Élève - Sara Benali */}
                 <button
-                  onClick={() => onSelectRole('student')}
+                  onClick={() => handleQuickRole('student')}
                   className="p-4 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 hover:border-blue-500 text-left transition-all group flex flex-col justify-between cursor-pointer hover:shadow-lg hover:shadow-blue-500/10"
                 >
                   <div className="flex items-start justify-between">
@@ -242,21 +362,37 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSelectRole }) => {
               </div>
             ) : (
               <form onSubmit={handleCredentialsLogin} className="space-y-4">
-                <div className="p-3.5 rounded-2xl bg-emerald-950/40 border border-emerald-800/60 text-xs text-emerald-200 flex items-center justify-between">
-                  <div>
-                    <span className="font-bold block">Compte Réception Démo :</span>
-                    <span className="font-mono text-[11px]">nadia@centrepro.demo / 123456</span>
+                {/* Reception accounts list selector for testing */}
+                <div className="p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700 text-xs text-slate-300 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white">Comptes Réception Enregistrés :</span>
+                    <span className="text-[11px] text-slate-400">Cliquez pour tester</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEmailInput('nadia@centrepro.demo');
-                      setPasswordInput('123456');
-                    }}
-                    className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg text-[11px] cursor-pointer"
-                  >
-                    Remplir
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    {receptionAccounts.map((acc) => (
+                      <button
+                        key={acc.id}
+                        type="button"
+                        onClick={() => {
+                          setEmailInput(acc.email);
+                          setPasswordInput(acc.password || '123456');
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border flex items-center gap-1.5 transition-colors cursor-pointer ${
+                          acc.active
+                            ? 'bg-emerald-950/60 text-emerald-300 border-emerald-700/60 hover:bg-emerald-900/60'
+                            : 'bg-rose-950/60 text-rose-300 border-rose-700/60 hover:bg-rose-900/60'
+                        }`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            acc.active ? 'bg-emerald-400' : 'bg-rose-400'
+                          }`}
+                        />
+                        <span>{acc.name}</span>
+                        {!acc.active && <span className="text-[9px] uppercase font-bold">(Désactivé)</span>}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="space-y-1.5">

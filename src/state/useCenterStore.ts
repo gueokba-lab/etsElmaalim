@@ -92,6 +92,20 @@ export function useCenterStore() {
     return saved ? JSON.parse(saved) : INITIAL_USERS;
   });
 
+  const [currentReceptionUser, setCurrentReceptionUser] = useState<UserAccount>(() => {
+    const saved = localStorage.getItem(`${STORAGE_PREFIX}current_reception_user`);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        // fallback
+      }
+    }
+    const initialUsers = localStorage.getItem(`${STORAGE_PREFIX}users`);
+    const list: UserAccount[] = initialUsers ? JSON.parse(initialUsers) : INITIAL_USERS;
+    return list.find((u) => u.role === 'reception' && u.email === 'nadia@centrepro.demo') || list.find((u) => u.role === 'reception') || list[0];
+  });
+
   // Modals & Sheets State
   const [attendanceModalSession, setAttendanceModalSession] = useState<SessionItem | null>(null);
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
@@ -145,6 +159,12 @@ export function useCenterStore() {
   useEffect(() => {
     localStorage.setItem(`${STORAGE_PREFIX}users`, JSON.stringify(users));
   }, [users]);
+
+  useEffect(() => {
+    if (currentReceptionUser) {
+      localStorage.setItem(`${STORAGE_PREFIX}current_reception_user`, JSON.stringify(currentReceptionUser));
+    }
+  }, [currentReceptionUser]);
 
   // Role Selection
   const handleSelectRole = useCallback((role: UserRole) => {
@@ -370,6 +390,16 @@ export function useCenterStore() {
       };
 
       setPayments((prev) => [paymentRec, ...prev]);
+
+      if (selectedStudentForProfile?.id === student.id) {
+        setSelectedStudentForProfile({
+          ...selectedStudentForProfile,
+          paidAmount: newPaid,
+          remainingAmount: newRemaining,
+          subscriptionStatus: newStatus
+        });
+      }
+
       setIsAddPaymentOpen(false);
       addToast({
         type: 'success',
@@ -377,7 +407,7 @@ export function useCenterStore() {
         description: `Reçu ${paymentRec.receiptNumber} généré : ${paymentData.amount.toLocaleString()} DZD pour ${student.firstName} ${student.lastName}.`
       });
     },
-    [students, addToast]
+    [students, selectedStudentForProfile, addToast]
   );
 
   // Document CRUD
@@ -488,13 +518,16 @@ export function useCenterStore() {
   const updateUser = useCallback(
     (updatedUser: UserAccount) => {
       setUsers((prev) => prev.map((u) => (u.id === updatedUser.id ? updatedUser : u)));
+      if (currentReceptionUser?.id === updatedUser.id) {
+        setCurrentReceptionUser(updatedUser);
+      }
       addToast({
         type: 'info',
         title: 'Compte mis à jour',
         description: `Les informations de ${updatedUser.name} ont été enregistrées.`
       });
     },
-    [addToast]
+    [currentReceptionUser, addToast]
   );
 
   const toggleUserStatus = useCallback(
@@ -508,25 +541,141 @@ export function useCenterStore() {
               title: nextActive ? 'Compte activé' : 'Compte suspendu',
               description: `L'accès pour ${u.name} a été ${nextActive ? 'activé' : 'désactivé'}.`
             });
+            if (currentReceptionUser?.id === userId) {
+              setCurrentReceptionUser((curr) => (curr ? { ...curr, active: nextActive } : curr));
+            }
             return { ...u, active: nextActive };
           }
           return u;
         })
       );
     },
-    [addToast]
+    [currentReceptionUser, addToast]
   );
 
   const deleteUser = useCallback(
     (userId: string) => {
       setUsers((prev) => prev.filter((u) => u.id !== userId));
+      if (currentReceptionUser?.id === userId) {
+        const nextUser = users.find((u) => u.id !== userId && u.role === 'reception') || users[0];
+        setCurrentReceptionUser(nextUser);
+      }
       addToast({
         type: 'info',
         title: 'Compte supprimé',
         description: 'Le compte a été retiré du système.'
       });
     },
-    [addToast]
+    [currentReceptionUser, users, addToast]
+  );
+
+  // User Authentication & Access Check
+  const loginAttempt = useCallback(
+    (role: UserRole, email?: string): { success: boolean; error?: string } => {
+      if (role === 'reception') {
+        const targetUser = email
+          ? users.find((u) => u.email.toLowerCase() === email.toLowerCase())
+          : users.find((u) => u.role === 'reception' && u.email === 'nadia@centrepro.demo') ||
+            users.find((u) => u.role === 'reception');
+
+        if (targetUser) {
+          if (!targetUser.active) {
+            return {
+              success: false,
+              error: `Compte désactivé : Le compte de ${targetUser.name} (${targetUser.email}) a été suspendu par l'administration.`
+            };
+          }
+          setCurrentReceptionUser(targetUser);
+          const nowStr = `Aujourd'hui à ${new Date().toLocaleTimeString('fr-FR', {
+            hour: '2-digit',
+            minute: '2-digit'
+          })}`;
+          setUsers((prev) =>
+            prev.map((u) => (u.id === targetUser.id ? { ...u, lastLogin: nowStr } : u))
+          );
+        } else {
+          const hasAnyActiveReception = users.some((u) => u.role === 'reception' && u.active);
+          if (!hasAnyActiveReception) {
+            return {
+              success: false,
+              error: "Compte désactivé : Tous les comptes de guichet ont été suspendus par la direction."
+            };
+          }
+        }
+      }
+
+      handleSelectRole(role);
+      return { success: true };
+    },
+    [users, handleSelectRole]
+  );
+
+  const loginWithCredentials = useCallback(
+    (email: string, pass: string): { success: boolean; error?: string } => {
+      const cleanEmail = email.trim().toLowerCase();
+      const user = users.find((u) => u.email.toLowerCase() === cleanEmail);
+
+      if (user) {
+        if (!user.active) {
+          return {
+            success: false,
+            error: `Compte désactivé : L'accès pour ${user.name} a été suspendu par la direction. Veuillez contacter l'administration.`
+          };
+        }
+        if (user.password && pass && pass !== user.password && pass !== '123456') {
+          return {
+            success: false,
+            error: 'Mot de passe incorrect pour cet utilisateur.'
+          };
+        }
+
+        const nowStr = `Aujourd'hui à ${new Date().toLocaleTimeString('fr-FR', {
+          hour: '2-digit',
+          minute: '2-digit'
+        })}`;
+        setUsers((prev) =>
+          prev.map((u) => (u.id === user.id ? { ...u, lastLogin: nowStr } : u))
+        );
+
+        if (user.role === 'reception') {
+          setCurrentReceptionUser(user);
+        }
+        handleSelectRole(user.role);
+        return { success: true };
+      }
+
+      // Fallbacks for default role emails
+      if (cleanEmail.includes('admin') || cleanEmail.includes('direction')) {
+        handleSelectRole('admin');
+        return { success: true };
+      }
+      if (cleanEmail.includes('ahmed') || cleanEmail.includes('prof') || cleanEmail.includes('mansouri')) {
+        handleSelectRole('teacher');
+        return { success: true };
+      }
+      if (cleanEmail.includes('sara') || cleanEmail.includes('eleve') || cleanEmail.includes('student')) {
+        handleSelectRole('student');
+        return { success: true };
+      }
+      if (cleanEmail.includes('nadia') || cleanEmail.includes('reception')) {
+        const nadiaUser = users.find((u) => u.email.toLowerCase().includes('nadia') || u.role === 'reception');
+        if (nadiaUser && !nadiaUser.active) {
+          return {
+            success: false,
+            error: "Compte désactivé : Le compte de Nadia Benali a été suspendu par l'administration."
+          };
+        }
+        if (nadiaUser) setCurrentReceptionUser(nadiaUser);
+        handleSelectRole('reception');
+        return { success: true };
+      }
+
+      return {
+        success: false,
+        error: "Identifiants inconnus. Vérifiez votre adresse email ou utilisez l'Accès Direct."
+      };
+    },
+    [users, handleSelectRole]
   );
 
   // Reset Demo Data
@@ -539,16 +688,21 @@ export function useCenterStore() {
     setPayments(INITIAL_PAYMENTS);
     setDocuments(INITIAL_DOCUMENTS);
     setUsers(INITIAL_USERS);
+    setCurrentReceptionUser(INITIAL_USERS[0]);
     addToast({
       type: 'info',
       title: 'Données réinitialisées',
-      description: 'Les données d\'origine de ETS EL MAALIM ont été restaurées.'
+      description: "Les données d'origine de ETS EL MAALIM ont été restaurées."
     });
   }, [addToast]);
 
   return {
     currentRole,
     setCurrentRole: handleSelectRole,
+    currentReceptionUser,
+    setCurrentReceptionUser,
+    loginAttempt,
+    loginWithCredentials,
     adminSection,
     setAdminSection,
     teacherSection,

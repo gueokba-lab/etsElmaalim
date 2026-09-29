@@ -218,15 +218,15 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
 
             <div className="grid grid-cols-3 gap-2 mb-3">
               <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-100 text-center">
-                <div className="text-sm font-bold text-emerald-700">{presentCount || 18}</div>
+                <div className="text-sm font-bold text-emerald-700">{presentCount}</div>
                 <div className="text-[10px] text-emerald-600 font-medium">Présences</div>
               </div>
               <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-100 text-center">
-                <div className="text-sm font-bold text-rose-700">{absentCount || 1}</div>
+                <div className="text-sm font-bold text-rose-700">{absentCount}</div>
                 <div className="text-[10px] text-rose-600 font-medium">Absences</div>
               </div>
               <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-100 text-center">
-                <div className="text-sm font-bold text-amber-700">{lateCount || 1}</div>
+                <div className="text-sm font-bold text-amber-700">{lateCount}</div>
                 <div className="text-[10px] text-amber-600 font-medium">Retards</div>
               </div>
             </div>

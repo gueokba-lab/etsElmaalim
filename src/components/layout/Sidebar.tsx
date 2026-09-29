@@ -4,7 +4,8 @@ import {
   AdminSection,
   TeacherSection,
   ReceptionSection,
-  StudentSection
+  StudentSection,
+  UserAccount
 } from '../../types';
 import {
   LayoutDashboard,
@@ -34,6 +35,7 @@ import {
 
 interface SidebarProps {
   currentRole: UserRole;
+  receptionUser?: UserAccount | null;
   adminSection: AdminSection;
   setAdminSection: (section: AdminSection) => void;
   teacherSection: TeacherSection;
@@ -51,6 +53,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({
   currentRole,
+  receptionUser,
   adminSection,
   setAdminSection,
   teacherSection,
@@ -146,8 +149,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
     switch (currentRole) {
       case 'admin':
         return { name: 'Directeur Général', title: 'Espace Direction', avatar: 'DG', color: 'bg-indigo-600' };
-      case 'reception':
-        return { name: 'Nadia Benali', title: 'Réception & Guichet', avatar: 'NB', color: 'bg-emerald-600' };
+      case 'reception': {
+        const name = receptionUser?.name || 'Nadia Benali';
+        const initials = name
+          .split(' ')
+          .map((n: string) => n[0])
+          .join('')
+          .substring(0, 2)
+          .toUpperCase() || 'NB';
+        return { name, title: 'Réception & Guichet', avatar: initials, color: 'bg-emerald-600' };
+      }
       case 'teacher':
         return { name: 'Ahmed Mansouri', title: 'Formateur Maths', avatar: 'AM', color: 'bg-blue-600' };
       case 'student':

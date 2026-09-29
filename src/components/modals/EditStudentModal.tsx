@@ -27,6 +27,10 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const grp = groups.find((g) => g.id === groupId);
+    const fee = Number(monthlyFee) || student.monthlyFee;
+    const remaining = Math.max(0, fee - student.paidAmount);
+    const status = remaining === 0 ? 'active' : student.paidAmount > 0 ? 'pending' : 'unpaid';
+
     onSave({
       ...student,
       firstName: firstName.trim(),
@@ -37,7 +41,9 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
       level,
       groupId,
       groupName: grp ? grp.name : student.groupName,
-      monthlyFee
+      monthlyFee: fee,
+      remainingAmount: remaining,
+      subscriptionStatus: status
     });
   };
 

@@ -27,7 +27,12 @@ export default function App() {
   if (store.currentRole === 'login') {
     return (
       <>
-        <LoginView onSelectRole={(role) => store.setCurrentRole(role)} />
+        <LoginView
+          onSelectRole={(role) => store.setCurrentRole(role)}
+          users={store.users}
+          onLoginAttempt={store.loginAttempt}
+          onLoginWithCredentials={store.loginWithCredentials}
+        />
         <ToastContainer toasts={store.toasts} onRemove={store.removeToast} />
       </>
     );
@@ -56,7 +61,7 @@ export default function App() {
         return titles[store.adminSection] || 'Administration';
       }
       case 'reception':
-        return 'Guichet d’Accueil & Inscriptions · Nadia Benali';
+        return `Guichet d’Accueil & Inscriptions · ${store.currentReceptionUser?.name || 'Nadia Benali'}`;
       case 'teacher':
         return 'Espace Formateur · Ahmed Mansouri';
       case 'student':
@@ -71,6 +76,7 @@ export default function App() {
       {/* Left Sidebar (In-flow on desktop, overlay on mobile) */}
       <Sidebar
         currentRole={store.currentRole}
+        receptionUser={store.currentReceptionUser}
         adminSection={store.adminSection}
         setAdminSection={store.setAdminSection}
         teacherSection={store.teacherSection}
@@ -91,6 +97,7 @@ export default function App() {
         {/* Full-width Top Header */}
         <TopHeader
           currentRole={store.currentRole}
+          receptionUser={store.currentReceptionUser}
           title={getHeaderTitle()}
           subtitle="ETS EL MAALIM · Système de gestion pour centre de formation"
           onSelectRole={store.setCurrentRole}
@@ -131,6 +138,7 @@ export default function App() {
             {store.currentRole === 'reception' && (
               <ReceptionView
                 currentTab={store.receptionSection}
+                currentReceptionUser={store.currentReceptionUser}
                 students={store.students}
                 payments={store.payments}
                 sessions={store.sessions}

@@ -988,6 +988,148 @@ export const AdminView: React.FC<AdminViewProps> = ({
       )}
 
       {/* ========================================================================= */}
+      {/* 5b. FORMULES D'ABONNEMENTS                                                */}
+      {/* ========================================================================= */}
+      {currentSection === 'subscriptions' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">Formules d'Abonnements & Tarifs</h1>
+              <p className="text-xs text-slate-500">
+                Grilles tarifaires officielles des cours de soutien scolaire au centre ETS EL MAALIM.
+              </p>
+            </div>
+            <button
+              onClick={onOpenAddPayment}
+              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-colors self-start sm:self-auto cursor-pointer"
+            >
+              <CreditCard className="w-4 h-4" />
+              <span>Encaisser un abonnement</span>
+            </button>
+          </div>
+
+          {/* Subscription Plans Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              {
+                title: 'Terminale BAC (3AS)',
+                fee: '6 000 DZD',
+                badge: 'Niveau Clé',
+                color: 'border-blue-500 bg-blue-50/20',
+                count: students.filter((s) => s.level.includes('3AS')).length,
+                desc: 'Préparation intensive BAC : Maths, Physique & Français.'
+              },
+              {
+                title: '2ème Année Lycée (2AS)',
+                fee: '5 500 DZD',
+                badge: 'Standard',
+                color: 'border-indigo-500 bg-indigo-50/20',
+                count: students.filter((s) => s.level.includes('2AS')).length,
+                desc: 'Consolidation des bases scientifiques et techniques.'
+              },
+              {
+                title: 'Cycle Moyen BEM (4AM)',
+                fee: '4 500 DZD',
+                badge: 'Brevet',
+                color: 'border-emerald-500 bg-emerald-50/20',
+                count: students.filter((s) => s.level.includes('BEM') || s.level.includes('4AM')).length,
+                desc: 'Révision méthodologique pour l’examen du BEM.'
+              },
+              {
+                title: 'Pack Trimestriel Tout-en-un',
+                fee: '15 000 DZD',
+                badge: 'Formule Promo',
+                color: 'border-amber-500 bg-amber-50/20',
+                count: students.filter((s) => s.subscriptionPlan?.includes('Pack') || s.monthlyFee >= 8000).length,
+                desc: 'Abonnement groupé trimestriel avec support complet.'
+              }
+            ].map((planItem) => (
+              <div
+                key={planItem.title}
+                className={`p-5 rounded-2xl bg-white border-2 shadow-xs space-y-3 flex flex-col justify-between ${planItem.color}`}
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white text-slate-700 border border-slate-200">
+                      {planItem.badge}
+                    </span>
+                    <span className="text-xs font-bold text-blue-600 bg-white px-2 py-0.5 rounded-full border border-slate-100">
+                      {planItem.count} inscrits
+                    </span>
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900 mt-2">{planItem.title}</h3>
+                  <div className="text-lg font-black text-slate-900 mt-1">{planItem.fee}</div>
+                  <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">{planItem.desc}</p>
+                </div>
+
+                <div className="pt-3 border-t border-slate-200/60 flex items-center justify-between text-xs text-slate-600">
+                  <span>Centre ETS EL MAALIM</span>
+                  <span className="font-semibold text-emerald-600">Formule Active</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Enrolled Students Table for Subscriptions */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-slate-900">Répartition des Abonnements par Étudiant</h2>
+              <span className="text-xs text-slate-500 font-medium">{students.length} dossiers</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-200">
+                  <tr>
+                    <th className="py-3 px-4">Élève</th>
+                    <th className="py-3 px-4">Groupe</th>
+                    <th className="py-3 px-4">Formule d'Abonnement</th>
+                    <th className="py-3 px-4">Tarif Mensuel</th>
+                    <th className="py-3 px-4">Réglé / Reste</th>
+                    <th className="py-3 px-4 text-right">Statut</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {students.map((st) => (
+                    <tr key={st.id} className="hover:bg-slate-50/70">
+                      <td className="py-3 px-4 font-bold text-slate-900">{st.firstName} {st.lastName}</td>
+                      <td className="py-3 px-4 text-slate-600">{st.groupName}</td>
+                      <td className="py-3 px-4 font-semibold text-slate-800">
+                        {st.subscriptionPlan || `Abonnement ${st.level}`}
+                      </td>
+                      <td className="py-3 px-4 font-mono font-bold text-slate-900">
+                        {st.monthlyFee.toLocaleString()} DZD
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-emerald-600 font-bold">{st.paidAmount.toLocaleString()} DZD</span>
+                        {st.remainingAmount > 0 ? (
+                          <span className="text-rose-600 text-[11px] block font-semibold">
+                            Reste : {st.remainingAmount.toLocaleString()} DZD
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-[11px] block">Soldé</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <span
+                          className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                            st.remainingAmount === 0
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : 'bg-rose-50 text-rose-700 border border-rose-200'
+                          }`}
+                        >
+                          {st.remainingAmount === 0 ? 'À jour' : 'Impayé'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
       {/* 6. CORPS PROFESSORAL / FORMATEURS                                         */}
       {/* ========================================================================= */}
       {currentSection === 'teachers' && (
